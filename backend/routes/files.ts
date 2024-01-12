@@ -1,34 +1,38 @@
 import express from "express";
 import multer from "multer";
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { UploadApiResponse, v2 as cloudinary } from "cloudinary";
 import File from "../models/File";
 
 const router = express.Router();
 const storage = multer.diskStorage({});
 
-const upload = multer({
+let upload = multer({
     storage,
 });
 
+//? @handles file upload
 router.post("/upload", upload.single("myFile"), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ message: "File Needed" });
-
-        console.log(req.file);
-
-        try {
-            await cloudinary.uploader.upload(req.file.path, {
-                folder: "shareme",
-                resource_type: "auto",
-            });
-        } catch (error) {
-            res.status(400).json({ message: "Cloudinary Error" });
+        if (!req.file) {
+            return res.json({ error: "Bro!!! file is required" });
         }
 
-        let uploadedfile: UploadApiResponse;
         const { originalname } = req.file;
-        const { secure_url, bytes, format } = uploadedfile;
 
+        let uploadedFile: UploadApiResponse;
+
+        try {
+            uploadedFile = await cloudinary.uploader.upload(req.file.path, {
+                use_filename: true, // not working
+                folder: "shareme",
+                resource_type: "auto", // for all type of files
+            });
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ messages: error });
+        }
+
+        const { secure_url, bytes, format } = uploadedFile;
         const file = await File.create({
             filename: originalname,
             sizeInBytes: bytes,
@@ -36,10 +40,14 @@ router.post("/upload", upload.single("myFile"), async (req, res) => {
             format,
         });
 
-        res.status(200).json(file);
+        return res.status(200).json({
+            id: file._id,
+            downloadPageLink: `${process.env.API_BASE_ENDPOINT_CLIENT}/download/${file._id}`,
+        });
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: "Server Error: " });
+
+        return res.status(500).json({ messages: "Server Error :(" });
     }
 });
 
