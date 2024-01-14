@@ -30,7 +30,6 @@ router.post("/upload", upload.single("myFile"), async (req, res) => {
                 resource_type: "auto", // for all type of files
             });
         } catch (error) {
-            console.log(error);
             return res.status(500).json({ messages: error });
         }
 
@@ -47,8 +46,6 @@ router.post("/upload", upload.single("myFile"), async (req, res) => {
             downloadPageLink: `${process.env.API_BASE_ENDPOINT_CLIENT}/download/${file._id}`,
         });
     } catch (error) {
-        console.log(error);
-
         return res.status(500).json({ messages: "Server Error :(" });
     }
 });
